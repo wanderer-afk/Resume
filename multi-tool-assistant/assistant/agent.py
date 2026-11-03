@@ -160,6 +160,8 @@ def summarise(tool_msg: dict[str, Any], profile: UserProfile) -> str:
     if name == "get_weather":
         cur = content["current"]
         lines = [f"Right now in {content['location']}: {profile.format_temp(cur['temperature_c'])}, {cur['conditions']}."]
+        if content.get("source"):
+            lines.insert(0, f"[{content['source']}]")
         for d in content["daily"]:
             lines.append(f"  {d['date']}: {d['conditions']}, {profile.format_temp(d['low_c'])} to "
                          f"{profile.format_temp(d['high_c'])}, {d['rain_chance_pct']}% chance of rain")
@@ -167,6 +169,8 @@ def summarise(tool_msg: dict[str, Any], profile: UserProfile) -> str:
     if name == "plan_trip":
         f = content["forecast"]
         lines = [f"Trip plan for {content['destination']}:"]
+        if f.get("source"):
+            lines.insert(0, f"[{f['source']}]")
         for d in f["daily"]:
             lines.append(f"  {d['date']}: {d['conditions']}, {profile.format_temp(d['low_c'])} to "
                          f"{profile.format_temp(d['high_c'])}, {d['rain_chance_pct']}% rain")
@@ -181,7 +185,8 @@ def summarise(tool_msg: dict[str, Any], profile: UserProfile) -> str:
         return "\n".join(lines)
     if name == "country_info":
         c = content
-        return (f"{c['name']}: capital {c['capital']}, region {c['region']}, "
+        prefix = f"[{c['source']}] " if c.get("source") else ""
+        return (f"{prefix}{c['name']}: capital {c['capital']}, region {c['region']}, "
                 f"currency {', '.join(c['currencies']) or 'n/a'}, languages {', '.join(c['languages']) or 'n/a'}.")
     if name == "list_tasks":
         tasks = content["tasks"]

@@ -309,3 +309,12 @@ def test_http_server_serves_page_and_chat(tools, profile):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_sample_mode_is_labelled_and_trip_plan_gets_country_facts(tasks, profile, tmp_path):
+    from assistant.services import SampleDestinationService, SampleWeatherService
+    weather, dest = SampleWeatherService(), SampleDestinationService()
+    result = plan_trip(weather, dest, tasks, "Lisbon", days=2)
+    assert result["forecast"]["source"].startswith("SAMPLE DATA")
+    assert result["country"]["capital"] == "Lisbon"
+    assert "source" in result["country"]

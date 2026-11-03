@@ -178,3 +178,54 @@ class TaskStore:
     def due_within(self, days: int) -> list[dict[str, Any]]:
         cutoff = (date.today() + timedelta(days=days)).isoformat()
         return [t for t in self.list() if t["due"] and t["due"] <= cutoff]
+
+
+SAMPLE_NOTE = "SAMPLE DATA - not a live forecast"
+
+
+SAMPLE_COUNTRIES = {"paris": "France", "lisbon": "Portugal", "tokyo": "Japan"}
+
+
+class SampleWeatherService:
+    """Deterministic fake forecasts for offline runs. Every result is labelled as sample data."""
+
+    def forecast(self, city: str, days: int = 3) -> dict[str, Any]:
+        days = max(1, min(int(days), 7))
+        seed = sum(ord(c) for c in city.lower())
+        country = SAMPLE_COUNTRIES.get(city.strip().lower(), "Sampleland")
+        daily = []
+        for i in range(days):
+            code = [0, 2, 61, 3][(seed + i) % 4]
+            daily.append({
+                "date": (date.today() + timedelta(days=i)).isoformat(),
+                "conditions": WMO_CODES[code],
+                "high_c": 12 + (seed + i) % 10,
+                "low_c": 4 + (seed + i) % 6,
+                "rain_chance_pct": 80 if code == 61 else 10,
+            })
+        return {
+            "location": f"{city.title()}, {country}",
+            "country": country,
+            "source": SAMPLE_NOTE,
+            "current": {"temperature_c": 14, "conditions": daily[0]["conditions"], "wind_kmh": 9},
+            "daily": daily,
+        }
+
+
+class SampleDestinationService:
+    """Country facts for a few well-known countries, offline. Unknown countries raise an error."""
+
+    FACTS = {
+        "france": ("Paris", "Europe", ["French"], ["Euro (€)"]),
+        "portugal": ("Lisbon", "Europe", ["Portuguese"], ["Euro (€)"]),
+        "japan": ("Tokyo", "Asia", ["Japanese"], ["Japanese yen (¥)"]),
+    }
+
+    def info(self, country: str) -> dict[str, Any]:
+        key = country.strip().lower()
+        if key not in self.FACTS:
+            raise ServiceError(f"no sample facts for '{country}'")
+        capital, region, languages, currencies = self.FACTS[key]
+        return {"name": country.strip().title(), "capital": capital, "region": region,
+                "languages": languages, "currencies": currencies, "timezones": [], "population": None,
+                "source": SAMPLE_NOTE}
