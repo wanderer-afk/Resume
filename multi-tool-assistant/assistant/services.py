@@ -2,6 +2,7 @@
 
 External services used (all free, no API key required):
   * Open-Meteo geocoding + forecast  (weather)
+  * REST Countries                    (country facts for trip planning)
 
 Productivity tools use a local JSON file so they work offline.
 """
@@ -19,6 +20,7 @@ import requests
 
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+COUNTRY_URL = "https://restcountries.com/v3.1/name/{name}"
 TIMEOUT_SECONDS = 10
 
 # WMO weather interpretation codes used by Open-Meteo.
@@ -86,12 +88,42 @@ class WeatherService:
         current = data.get("current", {})
         return {
             "location": f"{place['name']}, {place['country']}",
+            "country": place["country"],
             "current": {
                 "temperature_c": current.get("temperature_2m"),
                 "conditions": WMO_CODES.get(current.get("weather_code"), "unknown"),
                 "wind_kmh": current.get("wind_speed_10m"),
             },
             "daily": upcoming,
+        }
+
+
+class DestinationService:
+    """Country facts (capital, currency, languages, timezones) from REST Countries."""
+
+    def __init__(self, session: requests.Session | None = None) -> None:
+        self.session = session or requests.Session()
+
+    def info(self, country: str) -> dict[str, Any]:
+        resp = self.session.get(COUNTRY_URL.format(name=country), params={"fullText": "true"}, timeout=TIMEOUT_SECONDS)
+        if resp.status_code == 404:
+            # retry with a partial match, e.g. "United States" vs "United States of America"
+            resp = self.session.get(COUNTRY_URL.format(name=country), params={"fullText": "false"}, timeout=TIMEOUT_SECONDS)
+        if resp.status_code == 404:
+            raise ServiceError(f"no country found matching '{country}'")
+        resp.raise_for_status()
+        c = resp.json()[0]
+        return {
+            "name": c.get("name", {}).get("common"),
+            "capital": (c.get("capital") or ["unknown"])[0],
+            "region": c.get("region"),
+            "languages": sorted((c.get("languages") or {}).values()),
+            "currencies": sorted(
+                f"{v.get('name')} ({v.get('symbol', '')})".strip()
+                for v in (c.get("currencies") or {}).values()
+            ),
+            "timezones": c.get("timezones", []),
+            "population": c.get("population"),
         }
 
 
