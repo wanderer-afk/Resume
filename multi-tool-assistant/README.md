@@ -93,6 +93,10 @@ pytest -q
 All 39 tests run offline. HTTP is faked, the Claude client is a fake, and the planner is scripted.
 Live calls to `api.open-meteo.com`, `geocoding-api.open-meteo.com` and `restcountries.com` have not been run from the development sandbox, which blocks them. Run `python main.py --check-network` on your own computer to test them, and use the Claude path only with an API key.
 
+## Chat replay page
+
+`docs/chat-replay.html` is a single file that replays real sample-data replies in a chat window. It makes no network calls. Open it in any browser by double-clicking it. It is not the live app.
+
 ## Layout
 
 ```

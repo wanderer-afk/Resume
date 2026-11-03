@@ -1,0 +1,155 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Assistant chat replay</title>
+<style>
+  /* Layout: a single centred chat column. Palette: warm paper, ink-blue accent, sample-data amber. */
+  :root {
+    --bg: #f6f3ec;
+    --card: #fffdf8;
+    --fg: #1f1e1a;
+    --muted: #6f6a5e;
+    --accent: #2c5282;
+    --line: #e4dfd2;
+    --sample: #8a5a00;
+    --sample-bg: #fbeed0;
+    --user: #e7eef8;
+    color-scheme: light;
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161513; --card: #1f1e1b; --fg: #ece8df; --muted: #a29c8e;
+      --accent: #8fb3e6; --line: #33312b; --sample: #f0c26b; --sample-bg: #3a2e14; --user: #1d2a3d;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161513; --card: #1f1e1b; --fg: #ece8df; --muted: #a29c8e;
+    --accent: #8fb3e6; --line: #33312b; --sample: #f0c26b; --sample-bg: #3a2e14; --user: #1d2a3d;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.55 var(--sans);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px;
+  }
+  main { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; min-height: calc(100vh - 40px); }
+  header h1 { font: 500 1.6rem/1.2 var(--serif); margin: 0 0 4px; text-wrap: balance; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  .badge {
+    display: inline-block; margin-top: 10px; padding: 4px 10px; border-radius: 999px;
+    background: var(--sample-bg); color: var(--sample); font: 500 12px/1 var(--sans); letter-spacing: .04em;
+  }
+  #log { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 100%; border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 12px 14px; }
+  .msg.you { align-self: flex-end; background: var(--user); border-color: transparent; }
+  .msg .who { font: 500 11px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .msg pre { margin: 0; font: 14px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .tag { color: var(--sample); font: 500 12px/1.4 var(--sans); }
+  .trace { margin-top: 8px; font: 12px/1.4 var(--mono); color: var(--muted); white-space: pre-wrap; overflow-x: auto; }
+  form { display: flex; gap: 8px; position: sticky; bottom: 0; background: var(--bg); padding-block: 8px 4px; }
+  input {
+    flex: 1; min-width: 0; font: inherit; padding: 11px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button {
+    font: 500 14px/1 var(--sans); padding: 0 16px; border-radius: 10px; border: 0;
+    background: var(--accent); color: var(--bg); cursor: pointer;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { background: transparent; color: var(--accent); border: 1px solid var(--line); padding: 8px 10px; font-size: 13px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .msg { animation: rise .25s ease-out; }
+    @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+
+<main>
+  <header>
+    <h1>Multi-tool assistant, chat replay</h1>
+    <p>Each reply below is the real output of the app running with sample data. Nothing here calls a live API.</p>
+    <span class="badge">SAMPLE DATA - not live forecasts</span>
+  </header>
+
+  <div id="log" aria-live="polite"></div>
+
+  <div class="chips" aria-label="Example requests">
+    <button type="button" data-q="my name is Ana">my name is Ana</button>
+    <button type="button" data-q="set units to fahrenheit">set units to fahrenheit</button>
+    <button type="button" data-q="add task renew passport">add task renew passport</button>
+    <button type="button" data-q="list tasks">list tasks</button>
+    <button type="button" data-q="weather in Lisbon">weather in Lisbon</button>
+    <button type="button" data-q="trip to Tokyo for 2 days">trip to Tokyo for 2 days</button>
+    <button type="button" data-q="facts about Portugal">facts about Portugal</button>
+  </div>
+
+  <form id="form">
+    <input id="input" placeholder="Try a request" maxlength="1000" autocomplete="off" aria-label="Your request">
+    <button type="submit">Send</button>
+  </form>
+</main>
+
+<script>
+  // Replies copied from real runs of the app in --sample-data mode.
+  const REPLIES = [
+    { test: /^my name is (\w+)/i, reply: (m) => ({ text: `Profile: name ${m[1]}, home city not set, units celsius.`, trace: `update_profile({'name': '${m[1]}'}) -> ok` }) },
+    { test: /units to (fahrenheit|celsius)/i, reply: (m) => ({ text: `Profile: name Ana, home city not set, units ${m[1].toLowerCase()}.`, trace: `update_profile({'units': '${m[1].toLowerCase()}'}) -> ok` }) },
+    { test: /^add task (.+)/i, reply: (m) => ({ text: `Added task [14811a91] ${m[1]}.`, trace: `add_task({'title': '${m[1]}'}) -> ok` }) },
+    { test: /^list tasks/i, reply: () => ({ text: "[14811a91] renew passport (due no date, normal)\n[f9d87021] buy umbrella (due no date, normal)", trace: "list_tasks({}) -> ok" }) },
+    { test: /^weather in lisbon/i, reply: () => ({ tag: "[SAMPLE DATA - not a live forecast]", text: "Right now in Lisbon, Portugal: 57°F, overcast.\n  2026-11-03: overcast, 48°F to 66°F, 10% chance of rain\n  2026-11-04: clear sky, 39°F to 68°F, 10% chance of rain\n  2026-11-05: partly cloudy, 41°F to 70°F, 10% chance of rain", trace: "get_weather({'city': 'Lisbon'}) -> ok" }) },
+    { test: /^trip to tokyo/i, reply: () => ({ tag: "[SAMPLE DATA - not a live forecast]", text: "Trip plan for Tokyo, Japan:\n  2026-11-03: light rain, 6°C to 18°C, 80% rain\n  2026-11-04: overcast, 7°C to 19°C, 10% rain\nCountry: Japan; capital Tokyo; currency Japanese yen (¥); language Japanese.\nTasks added:\n  [507abf6c] Pack umbrella for Tokyo (due 2026-11-04)\n  [38552979] Check passport and visa rules for Japan (due no date)", trace: "plan_trip({'destination': 'Tokyo', 'days': 2}) -> ok" }) },
+    { test: /^facts about portugal/i, reply: () => ({ tag: "[SAMPLE DATA - not a live forecast]", text: "Portugal: capital Lisbon, region Europe, currency Euro (€), languages Portuguese.", trace: "country_info({'country': 'Portugal'}) -> ok" }) },
+  ];
+  const HELP = { text: "I can plan trips, check weather, look up country facts, manage tasks and update your profile. Try 'trip to Lisbon for 4 days', 'facts about Japan' or 'set units to fahrenheit'.", trace: "no tool needed" };
+
+  const log = document.getElementById("log");
+  function add(role, body) {
+    const div = document.createElement("div");
+    div.className = "msg" + (role === "you" ? " you" : "");
+    const who = document.createElement("div");
+    who.className = "who";
+    who.textContent = role === "you" ? "You" : "Assistant";
+    div.appendChild(who);
+    if (body.tag) {
+      const t = document.createElement("div");
+      t.className = "tag";
+      t.textContent = body.tag;
+      div.appendChild(t);
+    }
+    const pre = document.createElement("pre");
+    pre.textContent = body.text;
+    div.appendChild(pre);
+    if (body.trace) {
+      const tr = document.createElement("div");
+      tr.className = "trace";
+      tr.textContent = "step 1: " + body.trace;
+      div.appendChild(tr);
+    }
+    log.appendChild(div);
+    div.scrollIntoView({ block: "nearest" });
+  }
+
+  function answer(q) {
+    add("you", { text: q });
+    const hit = REPLIES.find((r) => r.test.test(q));
+    const m = hit ? q.match(hit.test) : null;
+    add("assistant", hit ? hit.reply(m) : HELP);
+  }
+
+  document.getElementById("form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = document.getElementById("input");
+    const q = input.value.trim();
+    if (!q) return;
+    answer(q);
+    input.value = "";
+  });
+  document.querySelectorAll(".chips button").forEach((b) => b.addEventListener("click", () => answer(b.dataset.q)));
+
+  add("assistant", { tag: "[SAMPLE DATA - not a live forecast]", text: "Hi. Tap a request below or type one. These replies are copied from real runs with sample data." });
+</script>
