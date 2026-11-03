@@ -4,6 +4,7 @@ on:
   push:
     branches: [claude/keen-volta-y88tci]
     paths: ["multi-tool-assistant/**", ".github/workflows/build-windows.yml"]
+    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
@@ -33,8 +34,24 @@ jobs:
           --collect-all anthropic --add-data "docs;docs"
           launcher.py
 
-      - name: Upload the app
+      - name: Upload the app to the run
         uses: actions/upload-artifact@v4
         with:
           name: AssistantApp-windows
           path: multi-tool-assistant/dist/AssistantApp.exe
+
+  release:
+    # Only for version tags such as v1.0.0: publishes a public download on the Releases page.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: AssistantApp-windows
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: AssistantApp.exe
+          generate_release_notes: true
