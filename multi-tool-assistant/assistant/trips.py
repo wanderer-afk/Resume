@@ -36,6 +36,9 @@ def plan_trip(
             priority="high",
         ))
     added.append(tasks.add(f"Check passport and visa rules for {forecast['country']}", priority="high"))
+    if forecast["country"] == "Japan":
+        added.append(tasks.add("Get a Suica or Pasmo IC card for trains and buses", priority="normal"))
+        added.append(tasks.add("Withdraw yen cash for small shops and restaurants", priority="normal"))
 
     return {
         "destination": forecast["location"],

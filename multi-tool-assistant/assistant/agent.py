@@ -148,7 +148,7 @@ class RulePlanner:
             return self._call("complete_task", {"task_id": m.group(1)})
         return Decision(text=(
             "I can plan trips, check weather, look up country facts, manage tasks and update your profile. "
-            "Try 'trip to Lisbon for 4 days', 'facts about Japan' or 'set units to fahrenheit'."
+            "Try 'trip to Tokyo for 4 days', 'weather in Kyoto' or 'facts about Japan'."
         ))
 
 

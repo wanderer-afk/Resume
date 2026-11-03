@@ -12,7 +12,7 @@ UNIT_CHOICES = {"celsius", "fahrenheit"}
 @dataclass
 class UserProfile:
     name: str = "there"
-    home_city: str | None = None
+    home_city: str | None = "Tokyo"  # default for a Japan-focused assistant
     units: str = "celsius"
 
     def __post_init__(self) -> None:

@@ -183,8 +183,22 @@ def test_get_weather_without_city_uses_home_city(tools, profile):
     assert result["location"] == "Paris, France"
 
 
-def test_get_weather_without_city_and_no_home_is_an_error(tools):
+def test_get_weather_without_city_and_no_home_is_an_error(tools, profile):
+    profile.update(home_city=None)
     assert "no home city" in tools.call("get_weather", {})["error"]
+
+
+def test_default_home_city_is_tokyo():
+    assert UserProfile().home_city == "Tokyo"
+
+
+def test_trip_to_japan_adds_japan_tasks(tmp_path):
+    from assistant.services import SampleDestinationService, SampleWeatherService
+    store = TaskStore(tmp_path / "t.json")
+    result = plan_trip(SampleWeatherService(), SampleDestinationService(), store, "Kyoto", days=2)
+    titles = [t["title"] for t in result["tasks_added"]]
+    assert any("Suica" in t for t in titles)
+    assert any("yen" in t for t in titles)
 
 
 def test_profile_tool_saves_changes(tools, profile, tmp_path):

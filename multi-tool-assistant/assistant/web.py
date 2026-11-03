@@ -39,7 +39,7 @@ PAGE = """<!doctype html>
 </style></head>
 <body><main>
   <h1>Multi-tool assistant</h1>
-  <div id="log"><div class="msg">Try: "trip to Lisbon for 4 days", "facts about Japan", "weather in Paris", "add task pack passport".</div></div>
+  <div id="log"><div class="msg">Try: "trip to Tokyo for 4 days", "weather in Kyoto", "facts about Japan", "add task pack passport".</div></div>
   <form id="form">
     <input id="input" name="message" placeholder="Ask something" maxlength="1000" autocomplete="off" required>
     <button id="send" type="submit">Send</button>

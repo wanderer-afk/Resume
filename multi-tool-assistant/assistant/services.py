@@ -199,7 +199,10 @@ class TaskStore:
 SAMPLE_NOTE = "SAMPLE DATA - made up, not real"
 
 
-SAMPLE_COUNTRIES = {"paris": "France", "lisbon": "Portugal", "tokyo": "Japan"}
+SAMPLE_COUNTRIES = {
+    "paris": "France", "lisbon": "Portugal",
+    "tokyo": "Japan", "kyoto": "Japan", "osaka": "Japan", "sapporo": "Japan", "nara": "Japan",
+}
 
 
 class SampleWeatherService:
