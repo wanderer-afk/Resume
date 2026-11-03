@@ -128,7 +128,15 @@ class DestinationService:
             raise ServiceError(f"no country found matching '{country}'")
         if resp.status_code >= 400:
             raise ServiceError(COUNTRY_UNREACHABLE)
-        c = resp.json()[0]
+        try:
+            data = resp.json()
+        except ValueError as exc:
+            raise ServiceError(COUNTRY_UNREACHABLE) from exc
+        if isinstance(data, dict):  # the site sent an error message instead of country data
+            raise ServiceError(COUNTRY_UNREACHABLE)
+        if not data:
+            raise ServiceError(f"no country found matching '{country}'")
+        c = data[0]
         return {
             "name": c.get("name", {}).get("common"),
             "capital": (c.get("capital") or ["unknown"])[0],

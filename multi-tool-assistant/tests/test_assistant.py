@@ -393,3 +393,25 @@ def test_check_network_all_good_message():
 def test_sample_data_is_labelled_as_made_up():
     from assistant.services import SAMPLE_NOTE
     assert "made up" in SAMPLE_NOTE
+
+
+class OddJsonSession:
+    """Returns a JSON error object where a list of countries is expected."""
+
+    def get(self, url, params=None, timeout=None):
+        return FakeResponse({"status": 400, "message": "Bad Request"}, 200)
+
+
+def test_unexpected_country_response_is_a_friendly_error():
+    with pytest.raises(ServiceError) as exc:
+        DestinationService(OddJsonSession()).info("Japan")
+    assert str(exc.value) == "could not reach the country service; try again or use --sample-data"
+
+
+def test_empty_country_list_is_not_found():
+    class Empty:
+        def get(self, url, params=None, timeout=None):
+            return FakeResponse([], 200)
+    with pytest.raises(ServiceError) as exc:
+        DestinationService(Empty()).info("Japan")
+    assert "no country found" in str(exc.value)
