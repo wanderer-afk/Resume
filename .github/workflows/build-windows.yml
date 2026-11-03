@@ -1,0 +1,40 @@
+name: Build Windows app
+
+on:
+  push:
+    branches: [claude/keen-volta-y88tci]
+    paths: ["multi-tool-assistant/**", ".github/workflows/build-windows.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: multi-tool-assistant
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install packages and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Build the app
+        run: >
+          python -m PyInstaller --onefile --console --name AssistantApp
+          --collect-all anthropic --add-data "docs;docs"
+          launcher.py
+
+      - name: Upload the app
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssistantApp-windows
+          path: multi-tool-assistant/dist/AssistantApp.exe
