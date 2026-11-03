@@ -14,6 +14,47 @@ until the planner has an answer (capped at a step limit).
 
 Replies use the saved units (°C or °F).
 
+## Run on Windows
+
+You need Python 3.11 or newer and Git. Install Python from https://www.python.org/downloads/ and tick **Add python.exe to PATH** on the first screen.
+
+1. Open **Command Prompt** or **PowerShell** and clone the project:
+
+   ```bat
+   git clone -b claude/keen-volta-y88tci https://github.com/wanderer-afk/Resume.git
+   cd Resume\multi-tool-assistant
+   ```
+
+2. Install the packages (you can skip this, since `run.bat` does it for you the first time):
+
+   ```bat
+   py -3 -m pip install -r requirements.txt
+   ```
+
+3. Check which websites the app can reach:
+
+   ```bat
+   py -3 main.py --check-network
+   ```
+
+4. Start the app:
+
+   ```bat
+   run.bat
+   ```
+
+   Or, without the batch file:
+
+   ```bat
+   py -3 main.py --web
+   ```
+
+5. Open **http://127.0.0.1:8000** in your browser. Press **Ctrl+C** in the window to stop it.
+
+If a website can't be reached, the app says so in one line. To try the app without live data, run `run.bat --sample-data` (or `py -3 main.py --web --sample-data`). Sample data is made up, and every reply says so.
+
+Once it's running, try `weather in Lisbon`, `trip to Lisbon for 3 days` or `facts about Portugal`.
+
 ## Run it
 
 ```bash
@@ -28,6 +69,9 @@ python main.py --trace
 
 # web UI at http://127.0.0.1:8000
 python main.py --web
+
+# test which websites the app can reach
+python main.py --check-network
 ```
 
 Data is stored in `data/` (`profile.json`, `tasks.json`). Change it with `--data-dir`.
@@ -46,9 +90,8 @@ Offline examples the rule planner understands:
 pytest -q
 ```
 
-All 32 tests run offline. HTTP is faked, the Claude client is a fake, and the planner is scripted.
-**Live API calls have not been exercised yet.** That needs network access to `api.open-meteo.com`,
-`geocoding-api.open-meteo.com` and `restcountries.com`, plus an API key for the Claude path.
+All 39 tests run offline. HTTP is faked, the Claude client is a fake, and the planner is scripted.
+Live calls to `api.open-meteo.com`, `geocoding-api.open-meteo.com` and `restcountries.com` have not been run from the development sandbox, which blocks them. Run `python main.py --check-network` on your own computer to test them, and use the Claude path only with an API key.
 
 ## Layout
 

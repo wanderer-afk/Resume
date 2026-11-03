@@ -33,6 +33,10 @@ WMO_CODES = {
 }
 
 
+WEATHER_UNREACHABLE = "could not reach the weather service; try again or use --sample-data"
+COUNTRY_UNREACHABLE = "could not reach the country service; try again or use --sample-data"
+
+
 class ServiceError(RuntimeError):
     """Raised when an external service returns no usable data."""
 
@@ -42,8 +46,11 @@ class WeatherService:
         self.session = session or requests.Session()
 
     def _get(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
-        resp = self.session.get(url, params=params, timeout=TIMEOUT_SECONDS)
-        resp.raise_for_status()
+        try:
+            resp = self.session.get(url, params=params, timeout=TIMEOUT_SECONDS)
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            raise ServiceError(WEATHER_UNREACHABLE) from exc
         return resp.json()
 
     def geocode(self, city: str) -> dict[str, Any]:
@@ -104,14 +111,23 @@ class DestinationService:
     def __init__(self, session: requests.Session | None = None) -> None:
         self.session = session or requests.Session()
 
+    def _get(self, name: str, full_text: bool) -> requests.Response:
+        try:
+            return self.session.get(
+                COUNTRY_URL.format(name=name), params={"fullText": str(full_text).lower()}, timeout=TIMEOUT_SECONDS,
+            )
+        except requests.RequestException as exc:
+            raise ServiceError(COUNTRY_UNREACHABLE) from exc
+
     def info(self, country: str) -> dict[str, Any]:
-        resp = self.session.get(COUNTRY_URL.format(name=country), params={"fullText": "true"}, timeout=TIMEOUT_SECONDS)
+        resp = self._get(country, full_text=True)
         if resp.status_code == 404:
             # retry with a partial match, e.g. "United States" vs "United States of America"
-            resp = self.session.get(COUNTRY_URL.format(name=country), params={"fullText": "false"}, timeout=TIMEOUT_SECONDS)
+            resp = self._get(country, full_text=False)
         if resp.status_code == 404:
             raise ServiceError(f"no country found matching '{country}'")
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            raise ServiceError(COUNTRY_UNREACHABLE)
         c = resp.json()[0]
         return {
             "name": c.get("name", {}).get("common"),
@@ -180,7 +196,7 @@ class TaskStore:
         return [t for t in self.list() if t["due"] and t["due"] <= cutoff]
 
 
-SAMPLE_NOTE = "SAMPLE DATA - not a live forecast"
+SAMPLE_NOTE = "SAMPLE DATA - made up, not real"
 
 
 SAMPLE_COUNTRIES = {"paris": "France", "lisbon": "Portugal", "tokyo": "Japan"}

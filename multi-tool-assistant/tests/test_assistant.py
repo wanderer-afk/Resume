@@ -318,3 +318,64 @@ def test_sample_mode_is_labelled_and_trip_plan_gets_country_facts(tasks, profile
     assert result["forecast"]["source"].startswith("SAMPLE DATA")
     assert result["country"]["capital"] == "Lisbon"
     assert "source" in result["country"]
+
+
+# --- friendly errors and network check ----------------------------------------
+
+import requests as _requests
+from assistant.netcheck import check_network, format_report
+
+
+class DownSession:
+    """Every request fails the way a blocked or offline network does."""
+
+    def get(self, url, params=None, timeout=None):
+        raise _requests.ConnectionError("blocked")
+
+
+def test_unreachable_weather_gives_one_friendly_line(tmp_path):
+    reg = build_registry(WeatherService(DownSession()), DestinationService(DownSession()),
+                         TaskStore(tmp_path / "t.json"), UserProfile(), str(tmp_path / "p.json"))
+    result = reg.call("get_weather", {"city": "Paris"})
+    assert result == {"error": "could not reach the weather service; try again or use --sample-data"}
+
+
+def test_unreachable_country_gives_one_friendly_line(tmp_path):
+    reg = build_registry(WeatherService(DownSession()), DestinationService(DownSession()),
+                         TaskStore(tmp_path / "t.json"), UserProfile(), str(tmp_path / "p.json"))
+    result = reg.call("country_info", {"country": "France"})
+    assert result == {"error": "could not reach the country service; try again or use --sample-data"}
+
+
+def test_chat_reply_shows_the_friendly_line_not_a_traceback(tmp_path):
+    reg = build_registry(WeatherService(DownSession()), DestinationService(DownSession()),
+                         TaskStore(tmp_path / "t.json"), UserProfile(), str(tmp_path / "p.json"))
+    reply = Agent(RulePlanner(), reg).run("weather in Paris").reply
+    assert reply == "Sorry, that failed: could not reach the weather service; try again or use --sample-data"
+    assert "Traceback" not in reply and "ProxyError" not in reply
+
+
+def test_check_network_reports_each_site(monkeypatch):
+    class Partial:
+        def get(self, url, params=None, timeout=None):
+            if "restcountries" in url:
+                raise _requests.ConnectionError("blocked")
+            return FakeResponse({})
+
+    rows = check_network(Partial())
+    assert [ok for _, ok, _ in rows] == [True, True, False]
+    report = format_report(rows)
+    assert "OK" in report and "FAILED" in report
+    assert "2 of 3 websites work" in report
+    assert "--sample-data" in report
+
+
+def test_check_network_all_good_message():
+    rows = check_network(FakeSession())
+    assert all(ok for _, ok, _ in rows)
+    assert "All 3 of 3 websites work" in format_report(rows)
+
+
+def test_sample_data_is_labelled_as_made_up():
+    from assistant.services import SAMPLE_NOTE
+    assert "made up" in SAMPLE_NOTE

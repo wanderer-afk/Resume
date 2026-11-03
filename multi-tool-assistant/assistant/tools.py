@@ -11,6 +11,8 @@ import json
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from .services import ServiceError
+
 
 @dataclass(frozen=True)
 class Tool:
@@ -54,7 +56,9 @@ class ToolRegistry:
             result = tool.func(**arguments)
         except TypeError as exc:  # wrong/unexpected argument names from the model
             return {"error": f"bad arguments for '{name}': {exc}"}
-        except Exception as exc:  # external API failures etc.
+        except ServiceError as exc:  # already a plain-English message for the user
+            return {"error": str(exc)}
+        except Exception as exc:  # anything unexpected: keep the type name for debugging
             return {"error": f"{type(exc).__name__}: {exc}"}
 
         # Make sure the result is JSON-serialisable before it goes back to the model.
