@@ -14,6 +14,16 @@ until the planner has an answer (capped at a step limit).
 
 Replies use the saved units (°C or °F).
 
+## Using this project
+
+Anyone can use it under the MIT license (see `LICENSE` in the repository root). You can run it, change it, and share it, as long as the license notice stays in place.
+
+- **Windows, no setup:** download `AssistantApp.exe` from the Releases page, then double-click it. Your browser opens the assistant at http://127.0.0.1:8000.
+- **Run from source:** see the sections below. Python 3.11 or newer is required.
+- **Your own copy:** use the GitHub Fork button, or download the code as a zip.
+
+Live weather and country facts come from free public services (Open-Meteo and REST Countries). They need no API key. If you cannot reach them, run `--check-network` to see which one is blocked, or use `--sample-data` for made-up data.
+
 ## Run on Windows
 
 You need Python 3.11 or newer and Git. Install Python from https://www.python.org/downloads/ and tick **Add python.exe to PATH** on the first screen.
